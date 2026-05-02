@@ -46,9 +46,9 @@ Uçtan uca büyük veri pipeline'ı: Docker + Kafka + Spark Structured Streaming
 
 ## Takım
 
-- [İsim 1] — Adım 1, 2, 3 (Docker, Kafka Producer, Spark Streaming)
-- [İsim 2] — Adım 4, 5 (EDA, Feature Engineering)
-- [İsim 3] — Adım 6, 7 (ML Modelleri, Dashboard)
+- Adem Alperen Arda (anonymo2239) — Adım 1, 2, 3 (Docker, Kafka Producer, Spark Streaming)
+- Barış Cerit (ceritbariss) — Adım 4, 5 (EDA, Feature Engineering)
+- Ubeydullah Gür (ubeydgur) — Adım 6, 7 (ML Modelleri, Dashboard)
 
 ## Ders
 
