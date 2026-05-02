@@ -47,6 +47,25 @@ services: # "Buradan sonra tanımladığım her blok, ayrı bir container olacak
     networks:
       - bigdata-net
 
+  producer:
+    build:
+      context: ./producer
+      dockerfile: Dockerfile
+    container_name: producer
+    depends_on:
+      - kafka
+    volumes:
+      - ./data:/data:ro
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: climate-events
+      DATA_PATH: /data/daily_weather.parquet
+      MESSAGES_PER_SECOND: 50
+      MAX_MESSAGES: 5000
+    networks:
+      - bigdata-net
+    restart: "no"
+
 networks: # Tüm servislerin haberleştiği özel ağ, container değil
   bigdata-net:
     driver: bridge
