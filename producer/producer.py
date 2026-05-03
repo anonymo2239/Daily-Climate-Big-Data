@@ -12,6 +12,7 @@ import os
 from datetime import datetime, timezone
 
 import pandas as pd
+import pyarrow.parquet as pq
 from kafka import  KafkaProducer
 from kafka.errors import KafkaError
 
@@ -42,12 +43,12 @@ def create_producer():
     logger.info("kafka producer olusuruldu.")
     return producer
 
-def load_data(path: str) -> pd.DataFrame:
-    """parquet dosyasini okur (Test icin sadece ilk 10.000 satiri aliyoruz)."""
-    logger.info(f"Veri yukleniyor: {path}")
-    df = pd.read_parquet(path).head(10000) 
-    logger.info(f"Yuklendi: {len(df):,} satir, {len(df.columns)} sutun")
-    return df
+def get_data_chunks(path: str, chunk_size=5000):
+    """Parquet dosyasını RAM'i şişirmeden parça parça okur."""
+    logger.info(f"Veri okunuyor: {path}")
+    parquet_file = pq.ParquetFile(path)
+    for batch in parquet_file.iter_batches(batch_size=chunk_size):
+        yield batch.to_pandas()
 
 def row_to_message(row: pd.Series) -> dict:
     """Bir DataFrame satırını Kafka mesajına çevirir."""
@@ -92,8 +93,6 @@ def main():
     logger.info("=" * 60)
 
     delay = 1.0 / MESSAGES_PER_SECOND
-
-    df = load_data(DATA_PATH)
     producer = create_producer()
 
     sent = 0
@@ -101,28 +100,34 @@ def main():
     start = time.time()
 
     try:
-        for _, row in df.iterrows():
-            if MAX_MESSAGES and sent >= MAX_MESSAGES:
-                logger.info(f"MAX_MESSAGES ({MAX_MESSAGES}) sınırına ulaşıldı.")
+        limit_reached = False
+        for df_chunk in get_data_chunks(DATA_PATH):
+            if limit_reached:
                 break
+                
+            for _, row in df_chunk.iterrows():
+                if MAX_MESSAGES and sent >= MAX_MESSAGES:
+                    logger.info(f"MAX_MESSAGES ({MAX_MESSAGES}) sınırına ulaşıldı.")
+                    limit_reached = True
+                    break
 
-            msg = row_to_message(row)
-            key = msg["station_id"]
+                msg = row_to_message(row)
+                key = msg["station_id"]
 
-            try:
-                producer.send(KAFKA_TOPIC, key=key, value=msg)
-                sent += 1
-            except KafkaError as e:
-                logger.error(f"Gönderim Hatasi {e}")
-                failed += 1
+                try:
+                    producer.send(KAFKA_TOPIC, key=key, value=msg)
+                    sent += 1
+                except KafkaError as e:
+                    logger.error(f"Gönderim Hatasi {e}")
+                    failed += 1
 
-            # her 1000 mesajda bir ozet log
-            if sent % 1000 == 0 and sent > 0:
-                elapsed = time.time() - start
-                rate = sent / elapsed
-                logger.info(f"Gönderildi: {sent:,} | Hız: {rate:.1f} msg/sn | Hata: {failed}")
+                # her 1000 mesajda bir ozet log
+                if sent % 1000 == 0 and sent > 0:
+                    elapsed = time.time() - start
+                    rate = sent / elapsed
+                    logger.info(f"Gönderildi: {sent:,} | Hız: {rate:.1f} msg/sn | Hata: {failed}")
 
-            time.sleep(delay)
+                time.sleep(delay)
 
     except KeyboardInterrupt:
         logger.info("Kullanıcı tarafından durduruldu.")

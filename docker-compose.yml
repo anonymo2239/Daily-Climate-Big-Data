@@ -30,6 +30,11 @@ services: # "Buradan sonra tanımladığım her blok, ayrı bir container olacak
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092 # Bu olmadan ya iç bağlantı ya dış bağlantı çalışmaz, ikisi birden çalışmaz. Standart Docker+Kafka tuzağıdır.
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - bigdata-net
     
@@ -53,7 +58,8 @@ services: # "Buradan sonra tanımladığım her blok, ayrı bir container olacak
       dockerfile: Dockerfile
     container_name: producer
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     volumes:
       - ./data:/data:ro
     environment:
@@ -65,6 +71,23 @@ services: # "Buradan sonra tanımladığım her blok, ayrı bir container olacak
     networks:
       - bigdata-net
     restart: "no"
+
+  spark:
+    image: jupyter/all-spark-notebook:spark-3.5.0
+    container_name: spark-master
+    depends_on:
+      - kafka
+    ports:
+      - "8888:8888"   # Jupyter arayüzü
+      - "4040:4040"   # Spark UI
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - GRANT_SUDO=yes
+    user: root
+    volumes:
+      - ./spark_workspace:/home/jovyan/work
+    networks:
+      - bigdata-net
 
 networks: # Tüm servislerin haberleştiği özel ağ, container değil
   bigdata-net:
