@@ -63,7 +63,7 @@ def row_to_message(row: pd.Series) -> dict:
 
         # olcum tarihi
         "measurement_date": str(row["date"]),
-        "season": str(row["date"]) if pd.notna(row["season"]) else None,
+        "season": str(row["season"]) if pd.notna(row["season"]) else None,
 
         "avg_temp_c": _safe_float(row["avg_temp_c"]),
         "min_temp_c": _safe_float(row["min_temp_c"]),
