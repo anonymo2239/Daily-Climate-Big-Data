@@ -90,6 +90,18 @@ services: # "Buradan sonra tanımladığım her blok, ayrı bir container olacak
       - ./notebooks:/home/jovyan/work/notebooks
       - ./delta-lake:/home/jovyan/work/delta-lake
       - ./data:/home/jovyan/work/data:ro
+      - ./mlflow:/home/jovyan/work/mlflow
+    networks:
+      - bigdata-net
+
+  mlflow-ui:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow-ui
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlflow:/mlflow
+    command: mlflow server --backend-store-uri /mlflow --default-artifact-root /mlflow --host 0.0.0.0 --port 5000
     networks:
       - bigdata-net
 
