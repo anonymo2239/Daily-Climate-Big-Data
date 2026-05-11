@@ -105,6 +105,20 @@ services: # "Buradan sonra tanımladığım her blok, ayrı bir container olacak
     networks:
       - bigdata-net
 
+  streamlit:
+    build:
+      context: ./streamlit_app
+      dockerfile: Dockerfile
+    container_name: streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./delta-lake:/delta-lake:ro  # Gold tabloları read-only olarak bağla
+    environment:
+      - DELTA_BASE=/delta-lake/gold
+    networks:
+      - bigdata-net
+
 networks: # Tüm servislerin haberleştiği özel ağ, container değil
   bigdata-net:
     driver: bridge
